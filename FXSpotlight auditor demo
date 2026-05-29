@@ -1,1 +1,572 @@
 
+import { useState, useEffect, useRef } from "react";
+
+// ── Font Loader ───────────────────────────────────────────────
+function FontLoader() {
+  useEffect(() => {
+    const l = document.createElement("link");
+    l.href = "https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@300;400;500&display=swap";
+    l.rel = "stylesheet";
+    document.head.appendChild(l);
+  }, []);
+  return null;
+}
+
+// ── Animate number ────────────────────────────────────────────
+function AnimNum({ target, duration = 1200 }) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    let start = null;
+    const step = ts => {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / duration, 1);
+      setVal(Math.floor(p * target));
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [target]);
+  return <>{val}</>;
+}
+
+// ── Particle background ───────────────────────────────────────
+function Particles() {
+  const canvasRef = useRef();
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    const particles = Array.from({ length: 40 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.5 + 0.5,
+      dx: (Math.random() - 0.5) * 0.3,
+      dy: (Math.random() - 0.5) * 0.3,
+      o: Math.random() * 0.3 + 0.05,
+    }));
+    let raf;
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${p.o})`;
+        ctx.fill();
+        p.x += p.dx; p.y += p.dy;
+        if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} />;
+}
+
+// ── Glass card ────────────────────────────────────────────────
+const G = ({ children, style = {} }) => (
+  <div style={{
+    background: "rgba(255,255,255,0.04)",
+    backdropFilter: "blur(32px)",
+    WebkitBackdropFilter: "blur(32px)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    borderTop: "1px solid rgba(255,255,255,0.14)",
+    borderRadius: 20,
+    ...style,
+  }}>{children}</div>
+);
+
+// ── Score ring ────────────────────────────────────────────────
+function ScoreRing({ score }) {
+  const r = 54, c = 2 * Math.PI * r;
+  const pct = score / 10;
+  const col = score >= 8 ? "#4ade80" : score >= 6 ? "#facc15" : score >= 4 ? "#fb923c" : "#f87171";
+  return (
+    <svg width={130} height={130} viewBox="0 0 130 130">
+      <circle cx={65} cy={65} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={8} />
+      <circle cx={65} cy={65} r={r} fill="none" stroke={col} strokeWidth={8}
+        strokeDasharray={`${c * pct} ${c * (1 - pct)}`}
+        strokeLinecap="round"
+        style={{ transform: "rotate(-90deg)", transformOrigin: "65px 65px", transition: "stroke-dasharray 1s ease" }} />
+      <text x={65} y={60} textAnchor="middle" fill={col} fontSize={28} fontWeight={800} fontFamily="Syne, sans-serif">
+        <AnimNum target={score} />
+      </text>
+      <text x={65} y={78} textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize={10} fontFamily="DM Mono, monospace" letterSpacing={2}>
+        /10
+      </text>
+    </svg>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────
+const INSTRUMENTS = ["EURUSD","GBPUSD","USDJPY","XAUUSD","US30","NAS100","GBPJPY","AUDUSD","USDCAD","EURJPY","USDCHF","EURGBP","NZDUSD","XAGUSD","SPX500","BTC/USD"];
+const EMOTIONS = ["","VERY POOR","POOR","AVERAGE","GOOD","EXCELLENT"];
+
+export default function FXSpotlightAuditor() {
+  const mono = "'DM Mono', 'Courier New', monospace";
+  const display = "'Syne', sans-serif";
+
+  const [step, setStep] = useState("form"); // form | loading | result
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+  const [auditCount, setAuditCount] = useState(0);
+
+  const [form, setForm] = useState({
+    instrument: "EURUSD",
+    direction: "Long",
+    entry: "",
+    sl: "",
+    tp: "",
+    reason: "",
+    emotion: 3,
+    checklist: "Yes",
+    session: "London",
+    experience: "1-3 years",
+  });
+
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const calcRR = () => {
+    if (!form.entry || !form.sl || !form.tp) return null;
+    const e = parseFloat(form.entry), s = parseFloat(form.sl), t = parseFloat(form.tp);
+    if (!e || !s || !t) return null;
+    const risk = Math.abs(e - s), reward = Math.abs(t - e);
+    return reward && risk ? (reward / risk).toFixed(2) : null;
+  };
+
+  const rr = calcRR();
+
+  const runAudit = async () => {
+    if (!form.entry || !form.sl || !form.tp || !form.reason.trim()) {
+      setError("Please fill in all required fields before auditing.");
+      return;
+    }
+    setError(""); setStep("loading");
+
+    const prompt = `You are FXSpotlight's elite institutional trading decision auditor. Conduct a strict, honest, process-based audit.
+
+TRADE SUBMITTED:
+Instrument: ${form.instrument}
+Direction: ${form.direction}
+Entry: ${form.entry} | Stop Loss: ${form.sl} | Take Profit: ${form.tp}
+Calculated R:R: ${rr ? `1:${rr}` : "Invalid"}
+Reason: ${form.reason}
+Emotional State: ${form.emotion}/5 (${EMOTIONS[form.emotion]})
+Checklist Done: ${form.checklist}
+Session: ${form.session}
+Experience: ${form.experience}
+
+Audit Rules:
+- Score 0-10 on PROCESS quality only, not prediction
+- If R:R < 1:1.5 → automatic -2 points minimum
+- If emotion ≤ 2 → automatic WAIT or ABORT regardless of setup
+- If checklist = No → automatic -1 point
+- Be brutally honest. Traders need truth not comfort.
+
+Return ONLY this exact JSON, no markdown, no extra text:
+{
+  "score": <0-10 integer>,
+  "verdict": "<ENTER|WAIT|ABORT>",
+  "verdict_reason": "<one sentence why this verdict>",
+  "process_grade": "<A|B|C|D|F>",
+  "rr_display": "<e.g. 1:2.4>",
+  "rr_quality": "<EXCELLENT|GOOD|ACCEPTABLE|POOR|INVALID>",
+  "emotional_fitness": "<FIT|CAUTION|UNFIT>",
+  "strengths": ["<strength 1>", "<strength 2>"],
+  "risks": ["<risk 1>", "<risk 2>"],
+  "what_to_fix": "<one specific, actionable improvement>",
+  "coaching_note": "<one direct sentence from a senior trader>",
+  "would_institutional_take": <true|false>
+}`;
+
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      const data = await res.json();
+      const raw = data.content?.find(b => b.type === "text")?.text || "";
+      const clean = raw.replace(/```json|```/g, "").trim();
+      const parsed = JSON.parse(clean);
+      setResult(parsed);
+      setAuditCount(c => c + 1);
+      setStep("result");
+    } catch (e) {
+      setError("Audit failed. Please try again.");
+      setStep("form");
+    }
+  };
+
+  const reset = () => {
+    setStep("form");
+    setResult(null);
+    setError("");
+    setForm(f => ({ ...f, entry: "", sl: "", tp: "", reason: "" }));
+  };
+
+  const verdictColor = v => ({ ENTER: "#4ade80", WAIT: "#facc15", ABORT: "#f87171" }[v] || "#fff");
+  const gradeColor = g => ({ A: "#4ade80", B: "#86efac", C: "#facc15", D: "#fb923c", F: "#f87171" }[g] || "#fff");
+  const fitnessColor = f => ({ FIT: "#4ade80", CAUTION: "#facc15", UNFIT: "#f87171" }[f] || "#fff");
+  const rrQualColor = q => ({ EXCELLENT: "#4ade80", GOOD: "#86efac", ACCEPTABLE: "#facc15", POOR: "#fb923c", INVALID: "#f87171" }[q] || "#fff");
+
+  const inputBase = {
+    background: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    borderRadius: 12,
+    color: "#fff",
+    padding: "13px 16px",
+    fontSize: 13,
+    fontFamily: mono,
+    outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
+    transition: "border 0.2s",
+  };
+
+  const label = (text, required) => (
+    <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: "3px", marginBottom: 8, display: "flex", gap: 6, alignItems: "center" }}>
+      {text}{required && <span style={{ color: "#f87171", fontSize: 8 }}>*</span>}
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#020202", color: "#fff", fontFamily: mono, position: "relative", overflowX: "hidden" }}>
+      <FontLoader />
+
+      {/* Background */}
+      <div style={{ position: "fixed", inset: 0, zIndex: 0, pointerEvents: "none" }}>
+        <Particles />
+        <div style={{ position: "absolute", top: "10%", left: "20%", width: 500, height: 500, background: "radial-gradient(circle, rgba(255,255,255,0.015) 0%, transparent 70%)", borderRadius: "50%" }} />
+        <div style={{ position: "absolute", bottom: "20%", right: "10%", width: 400, height: 400, background: "radial-gradient(circle, rgba(200,168,75,0.03) 0%, transparent 70%)", borderRadius: "50%" }} />
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,0.015) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+      </div>
+
+      <div style={{ position: "relative", zIndex: 1, maxWidth: 680, margin: "0 auto", padding: "0 20px 80px" }}>
+
+        {/* ── Header ── */}
+        <div style={{ padding: "40px 0 32px", textAlign: "center" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 9, color: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.08)", padding: "5px 16px", borderRadius: 20, marginBottom: 24, letterSpacing: "3px" }}>
+            <div style={{ width: 5, height: 5, background: "#4ade80", borderRadius: "50%" }} />
+            AI DECISION AUDITOR — LIVE
+          </div>
+          <div style={{ fontFamily: display, fontSize: "clamp(32px,6vw,56px)", fontWeight: 900, lineHeight: 0.95, marginBottom: 16, letterSpacing: "-2px" }}>
+            FXSPOTLIGHT
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", letterSpacing: "4px" }}>TRADE DECISION AUDIT SYSTEM</div>
+          {auditCount > 0 && (
+            <div style={{ marginTop: 16, fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "2px" }}>
+              {auditCount} AUDIT{auditCount > 1 ? "S" : ""} COMPLETED THIS SESSION
+            </div>
+          )}
+        </div>
+
+        {/* ── FORM ── */}
+        {step === "form" && (
+          <div>
+            <G style={{ padding: "32px", marginBottom: 16 }}>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "4px", marginBottom: 6 }}>STEP 1 OF 3</div>
+              <div style={{ fontFamily: display, fontSize: 20, fontWeight: 800, marginBottom: 24 }}>Trade Setup</div>
+
+              {/* Instrument + Direction */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div>
+                  {label("INSTRUMENT", true)}
+                  <select value={form.instrument} onChange={e => set("instrument", e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
+                    {INSTRUMENTS.map(i => <option key={i} value={i} style={{ background: "#111" }}>{i}</option>)}
+                  </select>
+                </div>
+                <div>
+                  {label("DIRECTION", true)}
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {["Long", "Short"].map(d => (
+                      <button key={d} onClick={() => set("direction", d)} style={{
+                        flex: 1, padding: "13px 8px", borderRadius: 12, cursor: "pointer",
+                        border: `1px solid ${form.direction === d ? (d === "Long" ? "rgba(74,222,128,0.5)" : "rgba(248,113,113,0.5)") : "rgba(255,255,255,0.08)"}`,
+                        background: form.direction === d ? (d === "Long" ? "rgba(74,222,128,0.1)" : "rgba(248,113,113,0.1)") : "rgba(255,255,255,0.03)",
+                        color: form.direction === d ? (d === "Long" ? "#4ade80" : "#f87171") : "rgba(255,255,255,0.25)",
+                        fontSize: 11, fontFamily: mono, letterSpacing: "2px", transition: "all 0.2s",
+                      }}>{d.toUpperCase()}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Entry / SL / TP */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+                {[["ENTRY PRICE", "entry"], ["STOP LOSS", "sl"], ["TAKE PROFIT", "tp"]].map(([l, k]) => (
+                  <div key={k}>
+                    {label(l, true)}
+                    <input type="number" step="any" placeholder="0.00000" value={form[k]}
+                      onChange={e => set(k, e.target.value)}
+                      style={inputBase} />
+                  </div>
+                ))}
+              </div>
+
+              {/* RR Preview */}
+              {rr && (
+                <div style={{ marginBottom: 16, padding: "12px 16px", background: rr >= 1.5 ? "rgba(74,222,128,0.06)" : "rgba(251,146,60,0.06)", border: `1px solid ${rr >= 1.5 ? "rgba(74,222,128,0.15)" : "rgba(251,146,60,0.15)"}`, borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", letterSpacing: "2px", marginBottom: 4 }}>CALCULATED R:R RATIO</div>
+                  <div style={{ fontFamily: display, fontSize: 22, fontWeight: 800, color: rr >= 2 ? "#4ade80" : rr >= 1.5 ? "#facc15" : "#fb923c" }}>
+                    1:{rr} {rr < 1.5 && <span style={{ fontSize: 11, color: "#fb923c" }}>— BELOW MINIMUM</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Session + Experience */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  {label("TRADING SESSION")}
+                  <select value={form.session} onChange={e => set("session", e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
+                    {["London", "New York", "Asia", "Overlap"].map(s => <option key={s} value={s} style={{ background: "#111" }}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  {label("EXPERIENCE LEVEL")}
+                  <select value={form.experience} onChange={e => set("experience", e.target.value)} style={{ ...inputBase, cursor: "pointer" }}>
+                    {["< 1 year", "1-3 years", "3-5 years", "5+ years"].map(s => <option key={s} value={s} style={{ background: "#111" }}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+            </G>
+
+            <G style={{ padding: "32px", marginBottom: 16 }}>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "4px", marginBottom: 6 }}>STEP 2 OF 3</div>
+              <div style={{ fontFamily: display, fontSize: 20, fontWeight: 800, marginBottom: 24 }}>Decision Context</div>
+
+              {/* Reason */}
+              <div style={{ marginBottom: 20 }}>
+                {label("REASON FOR THIS TRADE — BE SPECIFIC", true)}
+                <textarea value={form.reason} onChange={e => set("reason", e.target.value)}
+                  placeholder="Describe your setup, confluence, and why you're entering. Include timeframe, structure, and what triggered your entry..."
+                  rows={4}
+                  style={{ ...inputBase, resize: "vertical", lineHeight: 1.7 }} />
+                <div style={{ fontSize: 9, color: "rgba(255,255,255,0.15)", marginTop: 6, letterSpacing: "1px" }}>
+                  More detail = more accurate audit. Vague reasons = lower score.
+                </div>
+              </div>
+
+              {/* Emotional State */}
+              <div style={{ marginBottom: 20 }}>
+                {label("EMOTIONAL STATE BEFORE THIS TRADE")}
+                <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button key={n} onClick={() => set("emotion", n)} style={{
+                      flex: 1, padding: "14px 0", borderRadius: 12, cursor: "pointer",
+                      border: `1px solid ${form.emotion === n ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.06)"}`,
+                      background: form.emotion === n ? "rgba(255,255,255,0.1)" : "transparent",
+                      color: form.emotion === n ? "#fff" : "rgba(255,255,255,0.2)",
+                      fontFamily: display, fontWeight: 800, fontSize: 16,
+                      transition: "all 0.2s",
+                    }}>{n}</button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: "rgba(255,255,255,0.15)", letterSpacing: "1px" }}>
+                  <span>VERY POOR</span><span>EXCELLENT</span>
+                </div>
+                {form.emotion <= 2 && (
+                  <div style={{ marginTop: 12, padding: "10px 14px", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 10, fontSize: 11, color: "#f87171" }}>
+                    ⚠ Low emotional state detected. High probability of WAIT or ABORT verdict.
+                  </div>
+                )}
+              </div>
+
+              {/* Checklist */}
+              {label("PRE-TRADE CHECKLIST COMPLETED")}
+              <div style={{ display: "flex", gap: 8 }}>
+                {["Yes", "No", "Partial"].map(o => (
+                  <button key={o} onClick={() => set("checklist", o)} style={{
+                    flex: 1, padding: "13px 0", borderRadius: 12, cursor: "pointer",
+                    border: `1px solid ${form.checklist === o ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.06)"}`,
+                    background: form.checklist === o ? "rgba(255,255,255,0.08)" : "transparent",
+                    color: form.checklist === o ? "#fff" : "rgba(255,255,255,0.2)",
+                    fontSize: 11, fontFamily: mono, letterSpacing: "2px", transition: "all 0.2s",
+                  }}>{o.toUpperCase()}</button>
+                ))}
+              </div>
+            </G>
+
+            {/* Error */}
+            {error && (
+              <div style={{ marginBottom: 16, padding: "14px 18px", background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 12, fontSize: 12, color: "#f87171" }}>
+                {error}
+              </div>
+            )}
+
+            {/* Submit */}
+            <G style={{ padding: "24px" }}>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "4px", marginBottom: 6 }}>STEP 3 OF 3</div>
+              <div style={{ fontFamily: display, fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Get Your Verdict</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 1.7, marginBottom: 24 }}>
+                Claude AI analyses your decision quality and returns an institutional verdict. Process score, grade, strengths, risks, and coaching note — in seconds.
+              </div>
+              <button onClick={runAudit} style={{
+                width: "100%", padding: "20px", borderRadius: 16,
+                background: "#fff", color: "#000", border: "none",
+                cursor: "pointer", fontFamily: display,
+                fontSize: 16, fontWeight: 800, letterSpacing: "2px",
+                transition: "opacity 0.2s",
+              }}>
+                AUDIT MY DECISION →
+              </button>
+              <div style={{ textAlign: "center", marginTop: 16, fontSize: 10, color: "rgba(255,255,255,0.15)", letterSpacing: "2px" }}>
+                POWERED BY CLAUDE AI · INSTITUTIONAL GRADE · PROCESS ONLY
+              </div>
+            </G>
+          </div>
+        )}
+
+        {/* ── LOADING ── */}
+        {step === "loading" && (
+          <G style={{ padding: "80px 40px", textAlign: "center" }}>
+            <div style={{ marginBottom: 40 }}>
+              <div style={{ width: 60, height: 60, border: "2px solid rgba(255,255,255,0.1)", borderTop: "2px solid #fff", borderRadius: "50%", margin: "0 auto 32px", animation: "spin 1s linear infinite" }} />
+              <div style={{ fontFamily: display, fontSize: 24, fontWeight: 800, marginBottom: 16 }}>Auditing Decision</div>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", lineHeight: 2 }}>
+                Claude AI is analysing your decision quality.<br />
+                Process. Structure. Discipline. Psychology.
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {["Evaluating risk/reward quality...", "Checking emotional fitness...", "Assessing process adherence...", "Generating institutional verdict..."].map((t, i) => (
+                <div key={i} style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", letterSpacing: "1px", animation: `fadeIn 0.5s ease ${i * 0.4}s both` }}>
+                  {t}
+                </div>
+              ))}
+            </div>
+          </G>
+        )}
+
+        {/* ── RESULT ── */}
+        {step === "result" && result && (
+          <div>
+            {/* Verdict hero */}
+            <G style={{ padding: "40px", marginBottom: 16, textAlign: "center", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 300, height: 300, background: `radial-gradient(circle, ${verdictColor(result.verdict)}08 0%, transparent 70%)`, pointerEvents: "none" }} />
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", letterSpacing: "4px", marginBottom: 24 }}>AI AUDIT VERDICT</div>
+
+              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(52px,10vw,80px)", fontWeight: 900, color: verdictColor(result.verdict), letterSpacing: "-2px", lineHeight: 1, marginBottom: 16 }}>
+                {result.verdict}
+              </div>
+
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", lineHeight: 1.7, maxWidth: 400, margin: "0 auto 32px", fontStyle: "italic" }}>
+                "{result.verdict_reason}"
+              </div>
+
+              {/* Stats row */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+                {[
+                  { label: "PROCESS\nSCORE", el: <ScoreRing score={result.score} />, isRing: true },
+                  { label: "GRADE", val: result.process_grade, color: gradeColor(result.process_grade) },
+                  { label: "R:R RATIO", val: result.rr_display, color: rrQualColor(result.rr_quality) },
+                  { label: "EMOTIONAL\nFITNESS", val: result.emotional_fitness, color: fitnessColor(result.emotional_fitness) },
+                ].map((s, i) => (
+                  <div key={i} style={{ background: "rgba(0,0,0,0.3)", borderRadius: 14, padding: "16px 8px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    {s.isRing ? s.el : (
+                      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: s.val?.length > 6 ? 14 : 24, fontWeight: 800, color: s.color, marginBottom: 8, lineHeight: 1.1, textAlign: "center" }}>
+                        {s.val}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 7, color: "rgba(255,255,255,0.2)", letterSpacing: "1px", textAlign: "center", whiteSpace: "pre" }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            </G>
+
+            {/* Institutional take */}
+            <G style={{ padding: "20px 24px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>Would an institutional trader take this?</div>
+              <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 16, color: result.would_institutional_take ? "#4ade80" : "#f87171" }}>
+                {result.would_institutional_take ? "YES" : "NO"}
+              </div>
+            </G>
+
+            {/* Strengths + Risks */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
+              <G style={{ padding: "24px" }}>
+                <div style={{ fontSize: 9, color: "#4ade80", letterSpacing: "3px", marginBottom: 16 }}>STRENGTHS</div>
+                {result.strengths.map((s, i) => (
+                  <div key={i} style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                    <div style={{ color: "#4ade80", flexShrink: 0, fontSize: 14 }}>✓</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>{s}</div>
+                  </div>
+                ))}
+              </G>
+              <G style={{ padding: "24px" }}>
+                <div style={{ fontSize: 9, color: "#f87171", letterSpacing: "3px", marginBottom: 16 }}>RISKS</div>
+                {result.risks.map((r, i) => (
+                  <div key={i} style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                    <div style={{ color: "#f87171", flexShrink: 0, fontSize: 14 }}>⚠</div>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>{r}</div>
+                  </div>
+                ))}
+              </G>
+            </div>
+
+            {/* What to fix */}
+            <G style={{ padding: "24px", marginBottom: 12, borderLeft: "3px solid #facc15" }}>
+              <div style={{ fontSize: 9, color: "#facc15", letterSpacing: "3px", marginBottom: 10 }}>WHAT TO FIX</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.7 }}>{result.what_to_fix}</div>
+            </G>
+
+            {/* Coaching note */}
+            <G style={{ padding: "28px", marginBottom: 24, textAlign: "center" }}>
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", letterSpacing: "3px", marginBottom: 12 }}>COACHING NOTE</div>
+              <div style={{ fontSize: 16, color: "rgba(255,255,255,0.7)", lineHeight: 1.8, fontStyle: "italic" }}>
+                "{result.coaching_note}"
+              </div>
+              <div style={{ marginTop: 16, fontSize: 10, color: "rgba(255,255,255,0.15)", letterSpacing: "2px" }}>
+                — FXSpotlight AI COACH
+              </div>
+            </G>
+
+            {/* Actions */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <button onClick={reset} style={{
+                padding: "18px", borderRadius: 14,
+                background: "rgba(255,255,255,0.06)", color: "#fff",
+                border: "1px solid rgba(255,255,255,0.1)",
+                cursor: "pointer", fontSize: 11, fontFamily: mono,
+                letterSpacing: "2px", transition: "all 0.2s",
+              }}>AUDIT ANOTHER TRADE</button>
+              <a href="https://spotlightfx.gumroad.com/l/hrlfi" target="_blank" rel="noopener noreferrer" style={{
+                padding: "18px", borderRadius: 14,
+                background: "#fff", color: "#000",
+                border: "none", cursor: "pointer",
+                fontSize: 11, fontFamily: mono,
+                letterSpacing: "2px", textDecoration: "none",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>GET FOUNDER ACCESS →</a>
+            </div>
+
+            {/* Footer */}
+            <div style={{ textAlign: "center", marginTop: 32, fontSize: 10, color: "rgba(255,255,255,0.1)", letterSpacing: "3px", lineHeight: 2 }}>
+              FXSPOTLIGHT · DECISION ENFORCEMENT FOR SERIOUS TRADERS<br />
+              PROCESS OVER PROFITS · EVERY TIME
+            </div>
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        input, textarea, select { color-scheme: dark; }
+        input:focus, textarea:focus, select:focus { border-color: rgba(255,255,255,0.25) !important; }
+        select option { background: #111; color: #fff; }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #222; border-radius: 2px; }
+        button:hover { opacity: 0.85; }
+      `}</style>
+    </div>
+  );
+}
