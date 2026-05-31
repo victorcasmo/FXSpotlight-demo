@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const GUMROAD = "https://spotlightfx.gumroad.com/l/hrlfi";
 const DISCORD = "https://discord.gg/dwtMZzUVQ";
@@ -23,23 +24,34 @@ function Reveal({ children, delay = 0 }) {
     if (ref.current) o.observe(ref.current); return () => o.disconnect();
   }, []);
   return (
-    <div ref={ref} style={{ opacity: v ? 1 : 0, transform: v ? "translateY(0)" : "translateY(28px)", transition: `opacity .65s ease ${delay}s, transform .65s ease ${delay}s` }}>
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 40 }}
+      animate={v ? { opacity: 1, y: 0 } : { opacity: 0, y: 40 }}
+      transition={{ duration: 0.8, ease: "easeOut", delay }}
+    >
       {children}
-    </div>
+    </motion.div>
   );
 }
 
 // ── Glass card ────────────────────────────────────────────────
 const Glass = ({ children, style = {} }) => (
-  <div style={{
-    background: "rgba(255,255,255,0.03)",
-    backdropFilter: "blur(32px)",
-    WebkitBackdropFilter: "blur(32px)",
-    border: "1px solid rgba(255,255,255,0.07)",
-    borderTop: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 20,
-    ...style,
-  }}>{children}</div>
+  <motion.div
+    whileHover={{ y: -4, boxShadow: "0 20px 40px rgba(255,255,255,0.08)" }}
+    transition={{ duration: 0.3, ease: "easeOut" }}
+    style={{
+      background: "rgba(255,255,255,0.03)",
+      backdropFilter: "blur(32px)",
+      WebkitBackdropFilter: "blur(32px)",
+      border: "1px solid rgba(255,255,255,0.07)",
+      borderTop: "1px solid rgba(255,255,255,0.12)",
+      borderRadius: 20,
+      ...style,
+    }}
+  >
+    {children}
+  </motion.div>
 );
 
 // ── Risk Calculator ───────────────────────────────────────────
@@ -70,18 +82,33 @@ function RiskCalc() {
           </div>
         ))}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+      <motion.div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
         {[
           { label: "LOT SIZE", val: lot, color: "#fff" },
           { label: "RISK AMOUNT", val: `$${riskAmt}`, color: "#f87171" },
           { label: "3:1 TARGET", val: `$${profit}`, color: "#4ade80" },
-        ].map(m => (
-          <Glass key={m.label} style={{ padding: "20px 12px", textAlign: "center" }}>
-            <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 22, fontWeight: 800, color: m.color, marginBottom: 6 }}>{m.val}</div>
-            <div style={{ fontSize: 8, color: "rgba(255,255,255,0.2)", letterSpacing: "2px" }}>{m.label}</div>
-          </Glass>
+        ].map((m, i) => (
+          <motion.div
+            key={m.label}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: i * 0.1, ease: "easeOut" }}
+          >
+            <Glass style={{ padding: "20px 12px", textAlign: "center" }}>
+              <motion.div
+                key={`${m.label}-${m.val}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                style={{ fontFamily: "'Syne',sans-serif", fontSize: 22, fontWeight: 800, color: m.color, marginBottom: 6 }}
+              >
+                {m.val}
+              </motion.div>
+              <div style={{ fontSize: 8, color: "rgba(255,255,255,0.2)", letterSpacing: "2px" }}>{m.label}</div>
+            </Glass>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -177,28 +204,54 @@ function Checklist() {
       <div style={{ height: 3, background: "rgba(255,255,255,0.05)", borderRadius: 2, marginBottom: 16 }}>
         <div style={{ height: "100%", width: `${pct}%`, background: clear ? "#4ade80" : pct >= 70 ? "#facc15" : "#fff", borderRadius: 2, transition: "width 0.3s" }} />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
+      <motion.div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 16 }}>
         {items.map((item, i) => (
-          <div key={i} onClick={() => setChecked(p => ({ ...p, [i]: !p[i] }))} style={{
-            display: "flex", gap: 12, alignItems: "center", padding: "12px 16px",
-            background: checked[i] ? "rgba(74,222,128,0.04)" : "rgba(255,255,255,0.02)",
-            border: `1px solid ${checked[i] ? "rgba(74,222,128,0.15)" : "rgba(255,255,255,0.05)"}`,
-            borderRadius: 10, cursor: "pointer", transition: "all 0.15s",
-          }}>
-            <div style={{
-              width: 16, height: 16,
-              border: `1.5px solid ${checked[i] ? "#4ade80" : "rgba(255,255,255,0.15)"}`,
-              borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center",
-              background: checked[i] ? "#4ade80" : "transparent", flexShrink: 0, transition: "all 0.15s",
-            }}>
-              {checked[i] && <span style={{ color: "#000", fontSize: 9, fontWeight: "bold" }}>✓</span>}
-            </div>
-            <span style={{ fontSize: 12, color: checked[i] ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.6)", textDecoration: checked[i] ? "line-through" : "none", transition: "all 0.15s" }}>
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.05, ease: "easeOut" }}
+            onClick={() => setChecked(p => ({ ...p, [i]: !p[i] }))}
+            whileHover={{ scale: 1.02, x: 4 }}
+            style={{
+              display: "flex", gap: 12, alignItems: "center", padding: "12px 16px",
+              background: checked[i] ? "rgba(74,222,128,0.04)" : "rgba(255,255,255,0.02)",
+              border: `1px solid ${checked[i] ? "rgba(74,222,128,0.15)" : "rgba(255,255,255,0.05)"}`,
+              borderRadius: 10, cursor: "pointer",
+            }}
+          >
+            <motion.div
+              animate={{ scale: checked[i] ? 1 : 1, backgroundColor: checked[i] ? "#4ade80" : "transparent" }}
+              transition={{ duration: 0.2 }}
+              style={{
+                width: 16, height: 16,
+                border: `1.5px solid ${checked[i] ? "#4ade80" : "rgba(255,255,255,0.15)"}`,
+                borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center",
+                background: checked[i] ? "#4ade80" : "transparent", flexShrink: 0,
+              }}
+            >
+              <AnimatePresence>
+                {checked[i] && <motion.span
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.5 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ color: "#000", fontSize: 9, fontWeight: "bold" }}
+                >
+                  ✓
+                </motion.span>}
+              </AnimatePresence>
+            </motion.div>
+            <motion.span
+              animate={{ color: checked[i] ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.6)" }}
+              transition={{ duration: 0.2 }}
+              style={{ fontSize: 12, textDecoration: checked[i] ? "line-through" : "none" }}
+            >
               {item}
-            </span>
-          </div>
+            </motion.span>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
       <div style={{ padding: "14px", textAlign: "center", background: clear ? "rgba(74,222,128,0.06)" : "rgba(248,113,113,0.06)", border: `1px solid ${clear ? "rgba(74,222,128,0.2)" : "rgba(248,113,113,0.2)"}`, borderRadius: 12 }}>
         <div style={{ fontSize: 12, color: clear ? "#4ade80" : "#f87171", letterSpacing: "3px", fontWeight: 600 }}>
           {clear ? "✓ CLEARED TO TRADE" : "⊘ COMPLETE CHECKLIST BEFORE ENTERING"}
@@ -259,40 +312,111 @@ function AIAuditor() {
   };
 
   if (step === "loading") return (
-    <div style={{ textAlign: "center", padding: "40px 0" }}>
-      <div style={{ width: 48, height: 48, border: "2px solid rgba(255,255,255,0.1)", borderTop: "2px solid #fff", borderRadius: "50%", margin: "0 auto 24px", animation: "spin 1s linear infinite" }} />
-      <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 18, fontWeight: 800, marginBottom: 12 }}>Auditing Decision</div>
-      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", lineHeight: 2 }}>
-        Analysing process quality...<br />
-        Evaluating risk/reward...<br />
-        Generating institutional verdict...
-      </div>
-    </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      style={{ textAlign: "center", padding: "40px 0" }}
+    >
+      <motion.div
+        animate={{ rotate: 360 }}
+        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+        style={{ width: 48, height: 48, border: "2px solid rgba(255,255,255,0.1)", borderTop: "2px solid #fff", borderRadius: "50%", margin: "0 auto 24px" }}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        style={{ fontFamily: "'Syne',sans-serif", fontSize: 18, fontWeight: 800, marginBottom: 12 }}
+      >
+        Auditing Decision
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", lineHeight: 2 }}
+      >
+        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity }}>
+          Analysing process quality...
+        </motion.div>
+        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.2 }}>
+          Evaluating risk/reward...
+        </motion.div>
+        <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 1.5, repeat: Infinity, delay: 0.4 }}>
+          Generating institutional verdict...
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 
   if (step === "result" && result) return (
-    <div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+    >
       {/* Verdict */}
-      <div style={{ textAlign: "center", marginBottom: 20, padding: "32px 20px", background: `${vColor(result.verdict)}08`, border: `1px solid ${vColor(result.verdict)}22`, borderRadius: 16 }}>
-        <div style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", letterSpacing: "4px", marginBottom: 12 }}>AI VERDICT</div>
-        <div style={{ fontFamily: "'Syne',sans-serif", fontSize: 56, fontWeight: 900, color: vColor(result.verdict), lineHeight: 1, marginBottom: 12 }}>{result.verdict}</div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontStyle: "italic" }}>"{result.verdict_reason}"</div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        style={{ textAlign: "center", marginBottom: 20, padding: "32px 20px", background: `${vColor(result.verdict)}08`, border: `1px solid ${vColor(result.verdict)}22`, borderRadius: 16 }}
+      >
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.2 }}
+          style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", letterSpacing: "4px", marginBottom: 12 }}
+        >
+          AI VERDICT
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.3, ease: "backOut" }}
+          style={{ fontFamily: "'Syne',sans-serif", fontSize: 56, fontWeight: 900, color: vColor(result.verdict), lineHeight: 1, marginBottom: 12 }}
+        >
+          {result.verdict}
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.4 }}
+          style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", fontStyle: "italic" }}
+        >
+          "{result.verdict_reason}"
+        </motion.div>
+      </motion.div>
 
       {/* Metrics */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
+      <motion.div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: 16 }}>
         {[
           { label: "SCORE", val: `${result.score}/10`, color: result.score >= 7 ? "#4ade80" : result.score >= 5 ? "#facc15" : "#f87171" },
           { label: "GRADE", val: result.process_grade, color: gColor(result.process_grade) },
           { label: "R:R", val: result.rr_display, color: "#60a5fa" },
           { label: "EMOTIONAL", val: result.emotional_fitness, color: { FIT: "#4ade80", CAUTION: "#facc15", UNFIT: "#f87171" }[result.emotional_fitness] },
-        ].map(m => (
-          <Glass key={m.label} style={{ padding: "14px 8px", textAlign: "center" }}>
-            <div style={{ fontFamily: "'Syne',sans-serif", fontSize: m.val.length > 5 ? 12 : 18, fontWeight: 800, color: m.color, marginBottom: 4 }}>{m.val}</div>
-            <div style={{ fontSize: 7, color: "rgba(255,255,255,0.2)", letterSpacing: "1px" }}>{m.label}</div>
-          </Glass>
+        ].map((m, i) => (
+          <motion.div
+            key={m.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.5 + i * 0.08, ease: "easeOut" }}
+          >
+            <Glass style={{ padding: "14px 8px", textAlign: "center" }}>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.5 + i * 0.08 + 0.2 }}
+                style={{ fontFamily: "'Syne',sans-serif", fontSize: m.val.length > 5 ? 12 : 18, fontWeight: 800, color: m.color, marginBottom: 4 }}
+              >
+                {m.val}
+              </motion.div>
+              <div style={{ fontSize: 7, color: "rgba(255,255,255,0.2)", letterSpacing: "1px" }}>{m.label}</div>
+            </Glass>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Strengths + Risks */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
@@ -504,12 +628,24 @@ export default function FXSpotlightV3Complete() {
               FXSpotlight enforces your trading process before you enter the trade — not after the account is gone.
             </div>
             <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <a href={GUMROAD} target="_blank" rel="noopener noreferrer" style={{ background: "#fff", color: "#000", padding: "18px 48px", borderRadius: 32, fontSize: 12, letterSpacing: "2px", fontWeight: 600, textDecoration: "none", fontFamily: mono }}>
+              <motion.a
+                href={GUMROAD}
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(255,255,255,0.2)" }}
+                whileTap={{ scale: 0.98 }}
+                style={{ background: "#fff", color: "#000", padding: "18px 48px", borderRadius: 32, fontSize: 12, letterSpacing: "2px", fontWeight: 600, textDecoration: "none", fontFamily: mono, cursor: "pointer", display: "inline-block" }}
+              >
                 GET FOUNDER ACCESS — $49
-              </a>
-              <a href="#platform" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", padding: "18px 32px", borderRadius: 32, fontSize: 12, letterSpacing: "2px", textDecoration: "none", border: "1px solid rgba(255,255,255,0.08)", fontFamily: mono }}>
+              </motion.a>
+              <motion.a
+                href="#platform"
+                whileHover={{ scale: 1.05, backgroundColor: "rgba(255,255,255,0.1)" }}
+                whileTap={{ scale: 0.98 }}
+                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", padding: "18px 32px", borderRadius: 32, fontSize: 12, letterSpacing: "2px", textDecoration: "none", border: "1px solid rgba(255,255,255,0.08)", fontFamily: mono, cursor: "pointer", display: "inline-block" }}
+              >
                 SEE PLATFORM ↓
-              </a>
+              </motion.a>
             </div>
             <div style={{ fontSize: 10, color: "rgba(255,255,255,0.15)", marginTop: 20, letterSpacing: "2px" }}>30-DAY MONEY BACK GUARANTEE · NO QUESTIONS ASKED</div>
           </Reveal>
@@ -550,22 +686,32 @@ export default function FXSpotlightV3Complete() {
           </Reveal>
 
           {/* Tabs */}
-          <div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", paddingBottom: 4 }}>
+          <motion.div style={{ display: "flex", gap: 8, marginBottom: 20, overflowX: "auto", paddingBottom: 4 }}>
             {TABS.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} style={{
-                padding: "10px 20px", borderRadius: 24, cursor: "pointer", flexShrink: 0,
-                background: tab === t.id ? "#fff" : "rgba(255,255,255,0.04)",
-                border: `1px solid ${tab === t.id ? "#fff" : "rgba(255,255,255,0.08)"}`,
-                color: tab === t.id ? "#000" : "rgba(255,255,255,0.4)",
-                fontSize: 10, fontFamily: mono, letterSpacing: "2px",
-                fontWeight: tab === t.id ? 600 : 400, transition: "all 0.2s",
-                display: "flex", alignItems: "center", gap: 8,
-              }}>
+              <motion.button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+                animate={{
+                  background: tab === t.id ? "#fff" : "rgba(255,255,255,0.04)",
+                  borderColor: tab === t.id ? "#fff" : "rgba(255,255,255,0.08)",
+                  color: tab === t.id ? "#000" : "rgba(255,255,255,0.4)",
+                }}
+                transition={{ duration: 0.2 }}
+                style={{
+                  padding: "10px 20px", borderRadius: 24, cursor: "pointer", flexShrink: 0,
+                  border: `1px solid`,
+                  fontSize: 10, fontFamily: mono, letterSpacing: "2px",
+                  fontWeight: tab === t.id ? 600 : 400,
+                  display: "flex", alignItems: "center", gap: 8,
+                }}
+              >
                 {t.label}
                 {t.badge && <span style={{ fontSize: 8, background: tab === t.id ? "#000" : "#fff", color: tab === t.id ? "#fff" : "#000", padding: "2px 6px", borderRadius: 6 }}>{t.badge}</span>}
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
 
           <Glass style={{ padding: "32px" }}>
             {tab === "ai" && (
@@ -700,20 +846,44 @@ export default function FXSpotlightV3Complete() {
                 <div style={{ fontFamily: display, fontSize: "clamp(24px,3vw,40px)", fontWeight: 900 }}>Common Questions</div>
               </div>
               {FAQS.map((faq, i) => (
-                <div key={i} style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${openFaq === i ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)"}`, borderRadius: 12, overflow: "hidden", marginBottom: 8, transition: "all 0.2s" }}>
-                  <div onClick={() => setOpenFaq(openFaq === i ? null : i)} style={{ padding: "18px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
-                    <div style={{ fontSize: 13, color: openFaq === i ? "#fff" : "rgba(255,255,255,0.5)", fontWeight: openFaq === i ? 600 : 400 }}>{faq.q}</div>
-                    <div style={{ color: "rgba(255,255,255,0.3)", flexShrink: 0, fontSize: 16, transition: "transform 0.2s", transform: openFaq === i ? "rotate(45deg)" : "none" }}>+</div>
-                  </div>
-                  {openFaq === i && (
-                    <div style={{ padding: "0 20px 18px", fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.8, borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div style={{ paddingTop: 14 }}>{faq.a}</div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </Reveal>
-          </div>
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: i * 0.05 }}
+            style={{ background: "rgba(255,255,255,0.02)", border: `1px solid ${openFaq === i ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)"}`, borderRadius: 12, overflow: "hidden", marginBottom: 8 }}
+          >
+            <motion.div
+              onClick={() => setOpenFaq(openFaq === i ? null : i)}
+              whileHover={{ backgroundColor: "rgba(255,255,255,0.04)" }}
+              style={{ padding: "18px 20px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}
+            >
+              <div style={{ fontSize: 13, color: openFaq === i ? "#fff" : "rgba(255,255,255,0.5)", fontWeight: openFaq === i ? 600 : 400 }}>{faq.q}</div>
+              <motion.div
+                animate={{ rotate: openFaq === i ? 45 : 0 }}
+                transition={{ duration: 0.2 }}
+                style={{ color: "rgba(255,255,255,0.3)", flexShrink: 0, fontSize: 16 }}
+              >
+                +
+              </motion.div>
+            </motion.div>
+            <AnimatePresence>
+              {openFaq === i && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  style={{ padding: "0 20px 18px", fontSize: 12, color: "rgba(255,255,255,0.4)", lineHeight: 1.8, borderTop: "1px solid rgba(255,255,255,0.04)" }}
+                >
+                  <div style={{ paddingTop: 14 }}>{faq.a}</div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            </motion.div>
+          ))}
+          </Reveal>
+        </div>
         </div>
 
         {/* CTA */}
