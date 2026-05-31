@@ -1,4 +1,4 @@
-const http = require('http');
+import http from 'http';
 
 // Simple API server for development
 const server = http.createServer(async (req, res) => {

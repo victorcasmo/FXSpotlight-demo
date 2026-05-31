@@ -449,7 +449,7 @@ function AIAuditor() {
       <button onClick={reset} style={{ width: "100%", padding: "16px", borderRadius: 12, background: "rgba(255,255,255,0.06)", color: "#fff", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", fontSize: 11, fontFamily: mono, letterSpacing: "2px" }}>
         AUDIT ANOTHER TRADE
       </button>
-    </div>
+    </motion.div>
   );
 
   return (
