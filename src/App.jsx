@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import Header from "./components/Header";
 
 const GUMROAD = "https://spotlightfx.gumroad.com/l/hrlfi";
 const DISCORD = "https://discord.gg/dwtMZzUVQ";
 const TELEGRAM = "https://t.me/+zDVEEgdi4900Yjc8";
+const API_HEALTH_ENDPOINT = "/api/health";
 
 // ── Font Loader ───────────────────────────────────────────────
 const FontLoader = () => {
@@ -234,16 +236,45 @@ function AIAuditor() {
     }
     setError(""); setStep("loading");
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 second timeout
+      
       const res = await fetch("/api/audit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+      
       const data = await res.json();
-      if (!data.success) { setError(data.error || "Audit failed."); setStep("form"); return; }
-      setResult(data.audit); setStep("result");
+      console.log("[v0] Audit response:", data);
+      
+      if (!res.ok) {
+        const errorMsg = data.error || data.message || "Audit failed";
+        const details = data.details ? ` (${data.details.join(", ")})` : "";
+        setError(errorMsg + details);
+        setStep("form");
+        return;
+      }
+      
+      if (!data.success) {
+        setError(data.error || "Audit failed."); 
+        setStep("form");
+        return;
+      }
+      
+      setResult(data.audit);
+      setStep("result");
     } catch (e) {
-      setError("Connection failed. Please try again."); setStep("form");
+      console.error("[v0] Audit error:", e.message);
+      if (e.name === "AbortError") {
+        setError("Request timed out. Please check your connection and try again.");
+      } else {
+        setError("Connection failed. Please try again.");
+      }
+      setStep("form");
     }
   };
 
@@ -444,8 +475,29 @@ export default function FXSpotlightV3Complete() {
   const [openFaq, setOpenFaq] = useState(null);
   const [scrolled, setScrolled] = useState(false);
   const [slots] = useState(23);
+  const [apiHealth, setApiHealth] = useState(null);
   const mono = "'DM Mono','Courier New',monospace";
   const display = "'Syne',sans-serif";
+
+  // Health check on mount
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const response = await fetch(API_HEALTH_ENDPOINT);
+        const data = await response.json();
+        console.log("[v0] Health check result:", data);
+        setApiHealth(data);
+      } catch (error) {
+        console.error("[v0] Health check failed:", error.message);
+        setApiHealth({ status: "error", message: error.message });
+      }
+    };
+
+    // Check health immediately and then every 30 seconds
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 40);
@@ -456,6 +508,7 @@ export default function FXSpotlightV3Complete() {
   return (
     <div style={{ background: "#000", color: "#fff", minHeight: "100vh", fontFamily: mono, overflowX: "hidden" }}>
       <FontLoader />
+      <Header apiHealth={apiHealth} />
 
       {/* Ambient */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0 }}>
@@ -463,28 +516,6 @@ export default function FXSpotlightV3Complete() {
         <div style={{ position: "absolute", bottom: "20%", right: "-10%", width: 500, height: 500, background: "radial-gradient(circle, rgba(200,168,75,0.03) 0%, transparent 70%)", borderRadius: "50%" }} />
         <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(rgba(255,255,255,0.015) 1px, transparent 1px)", backgroundSize: "32px 32px" }} />
       </div>
-
-      {/* Nav */}
-      <nav style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        padding: "16px 32px",
-        background: scrolled ? "rgba(0,0,0,0.9)" : "transparent",
-        backdropFilter: scrolled ? "blur(20px)" : "none",
-        borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "none",
-        transition: "all 0.3s",
-        display: "flex", justifyContent: "space-between", alignItems: "center",
-      }}>
-        <div style={{ fontFamily: display, fontSize: 16, fontWeight: 900, letterSpacing: "3px" }}>FXSPOTLIGHT</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", letterSpacing: "2px", display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{ width: 5, height: 5, background: "#4ade80", borderRadius: "50%", animation: "pulse 2s infinite" }} />
-            {slots} SLOTS LEFT
-          </div>
-          <a href={GUMROAD} target="_blank" rel="noopener noreferrer" style={{ background: "#fff", color: "#000", padding: "10px 24px", borderRadius: 24, fontSize: 10, letterSpacing: "2px", fontWeight: 600, textDecoration: "none", fontFamily: mono }}>
-            GET ACCESS
-          </a>
-        </div>
-      </nav>
 
       <div style={{ position: "relative", zIndex: 1 }}>
 
