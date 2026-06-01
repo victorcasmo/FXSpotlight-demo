@@ -1,12 +1,39 @@
 import http from 'http';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import fs from 'fs';
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// Load environment variables from /vercel/share/.env.project if not already set
+function loadEnvVariables() {
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'GEMINI_API_KEY') {
+    try {
+      const envPath = '/vercel/share/.env.project';
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf-8');
+        const lines = envContent.split('\n');
+        lines.forEach(line => {
+          if (line.includes('=')) {
+            let [key, value] = line.split('=');
+            key = key.trim();
+            value = value.trim().replace(/^['"]|['"]$/g, ''); // Remove quotes
+            if (key && value) {
+              process.env[key] = value;
+            }
+          }
+        });
+      }
+    } catch (err) {
+      console.log('[v0] Warning: Could not load environment variables:', err.message);
+    }
+  }
+}
+
+// Load env variables on startup
+loadEnvVariables();
 
 async function handler(req, res) {
   // CORS
@@ -33,8 +60,10 @@ async function handler(req, res) {
           return;
         }
 
-        if (!GEMINI_API_KEY) {
-          console.error('GEMINI_API_KEY not set');
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+        
+        if (!GEMINI_API_KEY || GEMINI_API_KEY === 'GEMINI_API_KEY') {
+          console.error('[v0] GEMINI_API_KEY not set. Current value:', GEMINI_API_KEY);
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'API key not configured' }));
           return;
