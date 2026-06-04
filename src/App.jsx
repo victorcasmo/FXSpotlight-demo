@@ -7,10 +7,12 @@ const TELEGRAM = "https://t.me/+zDVEEgdi4900Yjc8";
 // ── Font Loader ───────────────────────────────────────────────
 const FontLoader = () => {
   useEffect(() => {
-    const link = document.createElement("link");
-    link.href = "https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500&family=Syne:wght@700;800;900&display=swap";
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
+    // Fonts are preloaded in index.html via link tags for better performance
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        document.documentElement.style.fontFamily = "'DM Mono', monospace";
+      });
+    }
   }, []);
   return null;
 };
@@ -19,8 +21,14 @@ const FontLoader = () => {
 function Reveal({ children, delay = 0 }) {
   const ref = useRef(); const [v, setV] = useState(false);
   useEffect(() => {
-    const o = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setV(true); o.disconnect(); } }, { threshold: 0.08 });
-    if (ref.current) o.observe(ref.current); return () => o.disconnect();
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setV(true);
+        observer.disconnect();
+      }
+    }, { threshold: 0.08 });
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
   }, []);
   return (
     <div ref={ref} style={{ opacity: v ? 1 : 0, transform: v ? "translateY(0)" : "translateY(28px)", transition: `opacity .65s ease ${delay}s, transform .65s ease ${delay}s` }}>
@@ -439,7 +447,7 @@ const FAQS = [
   { q: "Why $49 lifetime instead of monthly?", a: "Founder Access is a one-time deal for the first 30 traders only. After the founding round closes it moves to $29/month permanently." },
 ];
 
-export default function FXSpotlightV3Complete() {
+function FXSpotlightV3Complete() {
   const [tab, setTab] = useState("ai");
   const [openFaq, setOpenFaq] = useState(null);
   const [scrolled, setScrolled] = useState(false);
@@ -765,3 +773,4 @@ export default function FXSpotlightV3Complete() {
   );
 }
 
+export default FXSpotlightV3Complete;
