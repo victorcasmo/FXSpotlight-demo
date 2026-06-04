@@ -25,6 +25,12 @@ export default defineConfig({
     headers: {
       'Cache-Control': 'public, max-age=3600',
     },
+    allowedHosts: [
+      'localhost',
+      '127.0.0.1',
+      'sb-1il3yy4xg01j.vercel.run',
+      '.vercel.run',
+    ],
   },
 })
 
