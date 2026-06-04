@@ -31,6 +31,11 @@ export default defineConfig({
       'sb-1il3yy4xg01j.vercel.run',
       '.vercel.run',
     ],
+    hmr: {
+      host: 'localhost',
+      port: 5173,
+      protocol: 'ws',
+    },
   },
 })
 
