@@ -11,11 +11,7 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
-    allowedHosts: [
-      'localhost',
-      '127.0.0.1',
-      '.vercel.run',
-    ],
+    allowedHosts: 'all',
   },
 })
 
