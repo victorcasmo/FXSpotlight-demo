@@ -272,6 +272,12 @@ function AIAuditor() {
 
   if (step === "result" && result) return (
     <div>
+      {/* Demo Mode Banner */}
+      {result.demo && (
+        <div style={{ textAlign: "center", marginBottom: 20, padding: "12px 16px", background: "rgba(251, 146, 60, 0.1)", border: "1px solid rgba(251, 146, 60, 0.3)", borderRadius: 8, fontSize: 11, color: "rgba(255, 140, 0, 0.8)" }}>
+          Demo Mode: Add GEMINI_API_KEY for live AI auditor
+        </div>
+      )}
       {/* Verdict */}
       <div style={{ textAlign: "center", marginBottom: 20, padding: "32px 20px", background: `${vColor(result.verdict)}08`, border: `1px solid ${vColor(result.verdict)}22`, borderRadius: 16 }}>
         <div style={{ fontSize: 9, color: "rgba(255,255,255,0.2)", letterSpacing: "4px", marginBottom: 12 }}>AI VERDICT</div>

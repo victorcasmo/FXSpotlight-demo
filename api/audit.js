@@ -50,9 +50,41 @@ Return ONLY valid JSON, no markdown, no explanation:
   "would_institutional_take": <true|false>
 }`;
 
+  // Check if API key is configured
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'GEMINI_API_KEY') {
+    // Return demo response when API key is not configured
+    return res.status(200).json({
+      success: true,
+      demo: true,
+      message: "Demo mode: Configure GEMINI_API_KEY for live AI auditor",
+      audit: {
+        score: 7,
+        verdict: "ENTER",
+        verdict_reason: "Setup meets institutional standards with good R:R alignment.",
+        process_grade: "B",
+        rr_display: `1:${((parseFloat(tp) - parseFloat(entry)) / (parseFloat(entry) - parseFloat(sl))).toFixed(2)}`,
+        rr_quality: "GOOD",
+        emotional_fitness: "FIT",
+        strengths: [
+          "Risk-reward ratio above 1:1.5 threshold",
+          "Emotional state acceptable for entry",
+          "Clear technical confluence with support level"
+        ],
+        risks: [
+          "Ensure position size matches maximum daily drawdown",
+          "Watch for macro news during holding period"
+        ],
+        what_to_fix: "Document specific timeframe confluence (H4, D1) in reason.",
+        coaching_note: "Solid setup. Enter with full checklist completion.",
+        would_institutional_take: true
+      }
+    });
+  }
+
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
